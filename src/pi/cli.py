@@ -63,8 +63,8 @@ def status() -> None:
     corrections = json.loads(state.get("corrections_pending") or "[]")
     if corrections:
         typer.echo(
-            "corrections arrived after completion (re-run with `pi run --date`): "
-            + ", ".join(corrections)
+            "corrections arrived after completion (acknowledge with `pi run --date`; "
+            "security-ID history for that day is not re-applied yet): " + ", ".join(corrections)
         )
     if issues:
         typer.echo(f"refdata issues open: {issues} (new ISINs needing a link or confirmation)")

@@ -111,7 +111,8 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
   - A missing day pauses the run (exit 3), and the message names both fixes.
   - The 60-day streak is recomputed from the run log on every run, so declaring a forgotten holiday repairs it.
   - Corrections that arrive for a day already completed are flagged in `pi status` until you run `pi run --date`.
-  - Limitation: re-running a past date does not rewrite its security-ID history.
+  - Limitation: `pi run --date` only *acknowledges* a correction. It does not rewrite that day's security-ID history. It also refuses any date after the last completed day, so it can never jump over missing days.
+  - **Only you add holidays**, citing the NSE circular. A holiday declaration changes the Phase 1 exit count, so a coding agent must never add one to clear a pause.
 - **Not yet built:**
   - WP 1.2, the parsers, which need F1–F3.
   - WP 1.5, launchd, the heartbeat and Telegram.

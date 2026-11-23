@@ -152,9 +152,31 @@ def test_correction_after_completion_is_flagged_until_reprocessed(project: Path)
     assert state(project)["corrections_pending"] == "[]"
 
 
-def test_forcing_a_date_without_a_file_pauses(project: Path) -> None:
-    result = pipeline.run(project, now=ist(FRI, 19), force_date=WED)
-    assert result.status == "paused_missing" and result.missing == [WED]
+def test_forcing_a_new_date_cannot_jump_over_missing_days(project: Path) -> None:
+    drop(project, MON)
+    pipeline.run(project, now=ist(MON, 19))
+    drop(project, THU)  # TUE and WED have no files
+    result = pipeline.run(project, now=ist(THU, 19), force_date=THU)
+    assert result.status == "refused" and result.exit_code == pipeline.EXIT_FAILED
+    assert state(project)[pipeline.LAST_COMPLETE] == MON.isoformat()
+    # The normal run still stops at the first gap.
+    assert pipeline.run(project, now=ist(THU, 20)).missing == [TUE, WED]
+
+
+def test_forcing_before_anything_is_complete_is_refused(project: Path) -> None:
+    drop(project, FRI)
+    result = pipeline.run(project, now=ist(FRI, 17), force_date=FRI)  # also before 18:00
+    assert result.status == "refused"
+
+
+def test_forcing_a_completed_date_whose_file_is_gone_pauses(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    drop(project, THU)
+    pipeline.run(project, now=ist(THU, 19))
+    monkeypatch.setattr(RawStore, "partitions", lambda self, source: [])
+    result = pipeline.run(project, now=ist(FRI, 10), force_date=THU)
+    assert result.status == "paused_missing" and result.missing == [THU]
 
 
 def test_a_failing_day_rolls_back_and_exits_1(

@@ -71,7 +71,7 @@ class Paths:
 
 @dataclass
 class RunResult:
-    status: str  # ok | noop | no_data | paused_missing | failed
+    status: str  # ok | noop | no_data | paused_missing | refused | failed
     processed: list[date] = field(default_factory=list)
     missing: list[date] = field(default_factory=list)
     streak: int = 0
@@ -81,7 +81,7 @@ class RunResult:
     def exit_code(self) -> int:
         if self.status in ("ok", "noop"):
             return EXIT_OK
-        if self.status == "failed":
+        if self.status in ("failed", "refused"):
             return EXIT_FAILED
         return EXIT_PAUSED
 
@@ -231,6 +231,15 @@ def _pending(
     due = latest_due_trade_date(now)
 
     if force_date is not None:
+        last = db.get_state(con, LAST_COMPLETE)
+        if last is None or force_date > date.fromisoformat(last):
+            # Forcing a new day would jump over any missing days before it.
+            msg = (
+                f"--date only re-processes days already completed (complete through "
+                f"{last or 'none'}). Use plain `pi run` for new days."
+            )
+            _log(con, run_id, force_date, "refused", now, msg)
+            return RunResult("refused", message=msg)
         if force_date not in present:
             _log(con, run_id, force_date, "paused_missing", now, missing_day_message(force_date))
             return RunResult(
