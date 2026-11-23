@@ -42,7 +42,11 @@ STEP_2 = (
     """CREATE TABLE IF NOT EXISTS alert_state (
         rule_id VARCHAR NOT NULL,
         key VARCHAR NOT NULL,
+        scope VARCHAR NOT NULL,
         active_since TIMESTAMPTZ NOT NULL,
+        alert_id VARCHAR NOT NULL,
+        mode VARCHAR NOT NULL,
+        delivered BOOLEAN NOT NULL,
         PRIMARY KEY (rule_id, key)
     )""",
     """CREATE TABLE IF NOT EXISTS rule_state (
