@@ -191,6 +191,14 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 - **Still to wire in:**
   - the inputs, which come from WP 1.8 (credited quantity, last opposite trade), WP 1.12 (surveillance stages and price bands) and WP 2.3 (results dates);
   - the runtime check that `decide` never shows an action the guard blocked (WP 4.2).
+- **Hardened after review:**
+  - `window: always` blocks whatever the window state;
+  - unknown surveillance-stage spellings raise an error instead of passing as a warning, so WP 1.12 has to map exchange labels to `GSM-n`, `ESM-n`, `ASM-LT-n` or `ASM-ST-n`;
+  - the contra date uses the IST date;
+  - the contra period includes its anniversary day (fail-safe).
+- **Follow-ups, needed only if `restricted.yaml` is ever filled in:**
+  - Key the entries by **ISIN** rather than the internal `security_id`, which you can't know in advance. Refdata would resolve the ISIN when a run starts.
+  - Company codes usually set pre-clearance thresholds **cumulatively per quarter**. The current check is per trade, so a trade split into smaller pieces would slip past it.
 
 **Tax items marked [unverified]** in §12 of the architecture (the carry-forward period, the s.94(7) windows, and section numbers under the 2025 Act) go into `tax.yaml` with a `confidence: unverified` flag. Take them to the yearly CA review rather than researching them now.
 

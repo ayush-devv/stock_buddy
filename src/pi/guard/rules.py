@@ -20,7 +20,7 @@ from typing import Literal
 
 from pi.config import GuardRules, RestrictedEntry
 from pi.ledger.tax import add_months
-from pi.store.clock import require_aware
+from pi.store.clock import IST, require_aware
 
 Action = Literal["BUY", "SELL"]  # ADD buys, TRIM sells
 Outcome = Literal["block", "needs_preclearance", "warn"]
@@ -28,6 +28,9 @@ T2T_SERIES = ("BE", "BZ")
 SME_SERIES = ("SM", "ST")
 _STRENGTH = {"block": 3, "needs_preclearance": 2, "warn": 1}
 _GSM = re.compile(r"^GSM-(\d+)$")
+# The only stage spellings accepted. WP 1.12 must map exchange labels onto these; anything
+# else raises, so a new format can never slip past the GSM buy block as a mere warning.
+STAGE = re.compile(r"^(GSM-[1-6]|ESM-[1-2]|ASM-LT-[1-4]|ASM-ST-[1-2])$")
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,7 @@ def trading_window_closed(at: datetime, results_at: datetime | None, buffer_hour
 
 def _insider(ctx: TradeContext) -> list[Finding]:
     out: list[Finding] = []
+    today = require_aware(ctx.at).astimezone(IST).date()
     for entry in ctx.restricted:
         if entry.basis == "holds_upsi":
             out.append(
@@ -108,7 +112,11 @@ def _insider(ctx: TradeContext) -> list[Finding]:
                 )
             )
             continue
-        if ctx.window_closed is None:
+        if entry.window == "always":
+            out.append(
+                Finding("trading_window", "block", "Restricted at all times under restricted.yaml.")
+            )
+        elif ctx.window_closed is None:
             out.append(
                 Finding(
                     "trading_window",
@@ -120,14 +128,16 @@ def _insider(ctx: TradeContext) -> list[Finding]:
         elif ctx.window_closed:
             out.append(Finding("trading_window", "block", "Trading window is closed."))
         if ctx.last_opposite_trade is not None:
+            # "the next six months following the prior transaction": counted from the day
+            # after, so the anniversary day itself is still inside (fail-safe).
             ends = add_months(ctx.last_opposite_trade, entry.contra_trade_months)
-            if ctx.at.date() < ends:
+            if today <= ends:
                 out.append(
                     Finding(
                         "contra_trade",
                         "block",
                         f"Opposite trade on {ctx.last_opposite_trade}; contra "
-                        f"period runs to {ends}.",
+                        f"period runs to {ends} inclusive.",
                     )
                 )
         threshold = entry.preclearance_threshold_inr
@@ -145,6 +155,8 @@ def _insider(ctx: TradeContext) -> list[Finding]:
 def _surveillance(ctx: TradeContext, rules: GuardRules) -> list[Finding]:
     out: list[Finding] = []
     for stage in ctx.surveillance:
+        if not STAGE.match(stage):
+            raise ValueError(f"unrecognised surveillance stage {stage!r}; expected {STAGE.pattern}")
         m = _GSM.match(stage)
         level = int(m.group(1)) if m else None
         if ctx.action == "BUY" and level is not None and level >= rules.gsm_block_buy_from_stage:

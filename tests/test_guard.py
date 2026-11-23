@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -66,10 +66,28 @@ def test_contra_trade_inside_six_months_blocks() -> None:
         ctx(restricted=(DP,), window_closed=False, last_opposite_trade=date(2026, 6, 1)), RULES
     )
     assert ("contra_trade", "block") in rules_of(inside)
-    outside = check(
-        ctx(restricted=(DP,), window_closed=False, last_opposite_trade=date(2026, 5, 23)), RULES
-    )
-    assert outside.verdict == "pass"  # 23 May + 6 months = 23 Nov: period over
+
+
+def test_contra_period_includes_the_anniversary_day() -> None:
+    """PIT Schedule B: no opposite trade 'during the next six months following the prior
+    transaction'. Counted from the day after, a 23 May trade's period runs through 23 Nov,
+    so 23 Nov is still blocked (fail-safe) and 24 Nov is clear."""
+    kw = {"restricted": (DP,), "window_closed": False, "last_opposite_trade": date(2026, 5, 23)}
+    assert check(ctx(**kw), RULES).blocked  # AT is 23 Nov 2026
+    assert check(ctx(at=datetime(2026, 11, 24, 10, tzinfo=IST), **kw), RULES).verdict == "pass"
+
+
+def test_contra_uses_the_ist_date_not_utc() -> None:
+    """00:30 IST on 24 Nov is still 23 Nov in UTC; the IST date must be used."""
+    kw = {"restricted": (DP,), "window_closed": False, "last_opposite_trade": date(2026, 5, 23)}
+    at_utc = datetime(2026, 11, 24, 0, 30, tzinfo=IST).astimezone(UTC)
+    assert at_utc.date() == date(2026, 11, 23)
+    assert check(ctx(at=at_utc, **kw), RULES).verdict == "pass"
+
+
+def test_window_always_blocks_regardless_of_the_quarter() -> None:
+    always = DP.model_copy(update={"window": "always"})
+    assert check(ctx(restricted=(always,), window_closed=False), RULES).blocked
 
 
 def test_value_above_threshold_needs_preclearance() -> None:
@@ -107,6 +125,12 @@ def test_gsm_stage_3_selling_is_weekly_only() -> None:
 def test_other_surveillance_stages_warn() -> None:
     r = check(ctx(action="BUY", surveillance=("ASM-LT-1", "GSM-1")), RULES)
     assert r.verdict == "warn" and len(r.findings) == 2
+
+
+@pytest.mark.parametrize("stage", ["GSM-II", "GSM Stage 2", "gsm-2", "ESM-3", ""])
+def test_unrecognised_stage_strings_raise(stage: str) -> None:
+    with pytest.raises(ValueError, match="unrecognised surveillance stage"):
+        check(ctx(action="BUY", surveillance=(stage,)), RULES)
 
 
 def test_trade_for_trade_forbids_same_day_reversal() -> None:
