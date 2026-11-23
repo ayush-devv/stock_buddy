@@ -259,6 +259,21 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 
 ---
 
+**Phase 2 status, 2026-11-23** (built on made-up data, while waiting for files):
+- **WP 2.2 analytics** (`pi.analytics.series`, `pi.analytics.portfolio`):
+  - per stock: returns, realised and EWMA volatility (EWMA as of the close), vol-spike ratio, beta, current and maximum drawdown, distance from the 52-week high, 12-1 momentum, and trend against the moving average;
+  - per portfolio: weights, concentration, Ledoit-Wolf covariance (scikit-learn), risk contributions summing to 1, active sector weights, and scenario replay with a beta proxy for stocks that weren't listed at the time;
+  - short history raises an error instead of guessing.
+- **WP 2.4 alert engine** (`pi.alerts.rules`, `pi.alerts.engine`):
+  - six rules are implemented as pure functions: 🔴 DRAWDOWN (both the fall and the lag behind the index), 🔴 SURVEILLANCE (a stage change counts as new), 🟡 RISK_SHIFT, 🟡 LTCG_SOON, 🟡 LTCG_HEADROOM and 🟡 CA_AHEAD;
+  - the engine is edge-triggered and re-arms only when a rule that actually ran finds its condition false;
+  - 🟡 rules run in shadow for their first 20 weekdays, and 🔴 rules are never in shadow;
+  - more than 3 live 🔴 alerts in 7 days raises one 🟡 THRESHOLD_REVIEW, and reds are never suppressed;
+  - details stay in `alerts.payload_json`;
+  - new tables were added as migration step 2.
+- **Not wired into the evening run yet.** The rules need holdings, prices and index data, which come from the parsers (WP 1.2), corporate actions (WP 1.6), index ingest (WP 2.1, needs F5) and ledger persistence (WP 1.7).
+- **Still to build:** RESULTS_AHEAD, CRITICAL_FILING and PLEDGE (WP 2.3 and 2.5), the UI (WP 2.6) and alert scoring (WP 2.7).
+
 ## 8. Phase 3: research (about 95 h). Needs the Kite backfill, which is approved. It can overlap with Phase 2.
 
 | WP | Builds | Tests | Depends on |

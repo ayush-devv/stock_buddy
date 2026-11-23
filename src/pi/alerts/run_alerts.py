@@ -36,7 +36,21 @@ DDL = (
         acked_at TIMESTAMPTZ
     )""",
 )
-MIGRATIONS: tuple[tuple[str, ...], ...] = (DDL,)
+# Step 2 (WP 2.4): edge-trigger state per (rule, key) and the date each rule was enabled,
+# which drives the 20-trading-day shadow period for new 🟡 rules.
+STEP_2 = (
+    """CREATE TABLE IF NOT EXISTS alert_state (
+        rule_id VARCHAR NOT NULL,
+        key VARCHAR NOT NULL,
+        active_since TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (rule_id, key)
+    )""",
+    """CREATE TABLE IF NOT EXISTS rule_state (
+        rule_id VARCHAR PRIMARY KEY,
+        enabled_on DATE NOT NULL
+    )""",
+)
+MIGRATIONS: tuple[tuple[str, ...], ...] = (DDL, STEP_2)
 
 
 class Notifier(Protocol):
