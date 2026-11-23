@@ -77,8 +77,15 @@ class AlertRules(_Strict):
     ca_exdate_days: int = Field(ge=0)
 
 
+class GuardRules(_Strict):
+    gsm_block_buy_from_stage: int = Field(ge=1)
+    gsm_weekly_from_stage: int = Field(ge=1)
+    window_results_buffer_hours: int = Field(ge=48)  # SEBI minimum
+
+
 class RulesConfig(_Strict):
     decide: DecideRules
+    guard: GuardRules
     alerts: AlertRules
 
 

@@ -6,6 +6,12 @@ decide:
   cooldown_days: 30              # per stock
   ltcg_defer_days: 60            # defer a sale when a lot turns long-term within this many days
 
+guard:
+  # Exchange surveillance (architecture §10.2). Stage details are partly unverified.
+  gsm_block_buy_from_stage: 2    # brokers block buys from GSM stage 2
+  gsm_weekly_from_stage: 3       # GSM stage 3 and up trades only in a weekly session
+  window_results_buffer_hours: 48  # SEBI PIT: window reopens 48h after results
+
 alerts:
   shadow_days: 20                # new yellow rules run silently for this many trading days
   urgent_weekly_cap: 3           # more than this triggers a threshold review

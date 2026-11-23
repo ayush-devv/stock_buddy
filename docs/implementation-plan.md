@@ -168,6 +168,30 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
   - DP charge as a transfer expense (`dp_charge_is_transfer_expense`, marked unverified);
   - the April 2026 buyback rule, which rests on a secondary source.
 
+**WP 1.13 status, 2026-11-23: rule engine built** (`pi.guard.rules`).
+- `check(TradeContext)` returns every finding, graded block, needs pre-clearance or warn. The verdict is the strongest finding.
+- **Insider rules (§10.1):**
+  - a closed trading window blocks;
+  - an *unknown* window state for a restricted stock also blocks (fail-safe);
+  - a trade opposite to one within the contra period blocks;
+  - a trade above the pre-clearance threshold is flagged as needing pre-clearance;
+  - holding UPSI blocks any action.
+- **Trading window:** closed from the quarter-end date until 48 hours after results.
+- **Surveillance (§10.2):**
+  - GSM stage 2 and above blocks buying;
+  - GSM stage 3 and above warns that the stock trades only in a weekly session;
+  - other stages warn;
+  - for BE/BZ (trade-for-trade), selling shares bought the same day blocks.
+- **Practical limits:**
+  - a same-day sale warns that it counts as speculative income;
+  - a circuit lock or price-band cut warns "may not fill";
+  - a sale is limited to credited shares, and an unknown credited quantity blocks;
+  - SME trades must be in whole lots.
+- Stage thresholds live in `rules.yaml` under `guard:`.
+- **Still to wire in:**
+  - the inputs, which come from WP 1.8 (credited quantity, last opposite trade), WP 1.12 (surveillance stages and price bands) and WP 2.3 (results dates);
+  - the runtime check that `decide` never shows an action the guard blocked (WP 4.2).
+
 **Tax items marked [unverified]** in §12 of the architecture (the carry-forward period, the s.94(7) windows, and section numbers under the 2025 Act) go into `tax.yaml` with a `confidence: unverified` flag. Take them to the yearly CA review rather than researching them now.
 
 **Phase 1 exit (§17, unchanged):** 60 clean days; the ledger matches the broker exactly; contract notes match within ₹1 excluding DP; tax P&L matches; A8 is already confirmed (2026-11-23).
