@@ -24,6 +24,7 @@ from uuid import uuid4
 
 import duckdb
 
+from pi.alerts import run_alerts
 from pi.config import load_all
 from pi.refdata import securities
 from pi.refdata.calendar import clean_streak, missing_days, trading_days
@@ -76,6 +77,7 @@ class RunResult:
     missing: list[date] = field(default_factory=list)
     streak: int = 0
     message: str = ""
+    alert: str | None = None  # what happened to the run alert, if one fired
 
     @property
     def exit_code(self) -> int:
@@ -187,8 +189,17 @@ def _summarise(
     return streak
 
 
-def run(root: Path, now: datetime | None = None, force_date: date | None = None) -> RunResult:
-    """Run the evening pipeline for every pending trade date (or just `force_date`)."""
+def run(
+    root: Path,
+    now: datetime | None = None,
+    force_date: date | None = None,
+    notifier: run_alerts.Notifier | None = None,
+) -> RunResult:
+    """Run the evening pipeline for every pending trade date (or just `force_date`).
+
+    A paused, empty or failed run fires a 🔴 alert through `notifier`; with no notifier
+    the alert is still recorded as undelivered.
+    """
     now = require_aware(now or utc_now())
     paths = Paths(root)
     cfg = load_all(paths.config_dir)  # fail before touching data if config is invalid
@@ -201,6 +212,7 @@ def run(root: Path, now: datetime | None = None, force_date: date | None = None)
         try:
             db.ensure_schema(con, db.CORE_DDL)
             db.ensure_schema(con, securities.DDL)
+            db.ensure_schema(con, run_alerts.DDL)
             run_id = uuid4().hex
             present = set(store.partitions("bhavcopy"))
             try:
@@ -209,6 +221,10 @@ def run(root: Path, now: datetime | None = None, force_date: date | None = None)
                 result = RunResult("failed", message=repr(exc))
             if result.status in ("noop", "no_data"):
                 _log(con, run_id, None, result.status, now, {"message": result.message})
+            first_missing = result.missing[0].isoformat() if result.missing else None
+            message = run_alerts.for_run(result.status, first_missing)
+            if message is not None:
+                result.alert = run_alerts.fire(con, message, notifier, now)
             result.streak = _summarise(con, store, holidays, present, now)
             db.set_state(con, "last_run_status", result.status, now)
             db.set_state(con, "last_run_at", now.isoformat(), now)

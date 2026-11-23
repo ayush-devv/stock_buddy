@@ -1,4 +1,8 @@
-"""Command-line entry point: `pi status`, `pi run` (WP 0.4, WP 1.4)."""
+"""Command-line entry point (WP 0.4, 1.4, 1.5).
+
+pi status | pi run [--date D] | pi notify-test
+pi secret status|set|delete NAME | pi schedule show|install|uninstall
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,29 @@ from datetime import date
 import typer
 
 from pi import pipeline
+from pi.alerts.telegram import AlertMessage, TelegramNotifier
 from pi.config import CONFIG_FILES, ConfigError, load_one, project_root
+from pi.ops import heartbeat, launchd, secrets
 from pi.store import db
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+secret_app = typer.Typer(no_args_is_help=True, help="Secrets in the macOS Keychain.")
+schedule_app = typer.Typer(no_args_is_help=True, help="The 19:00 launchd LaunchAgent.")
+app.add_typer(secret_app, name="secret")
+app.add_typer(schedule_app, name="schedule")
+
+
+def _notifier() -> TelegramNotifier | None:
+    """Telegram notifier from the Keychain, or None if not set up (alerts are then
+    recorded as undelivered, never lost)."""
+    try:
+        token, chat_id = secrets.get("telegram_bot_token"), secrets.get("telegram_chat_id")
+    except secrets.SecretError as exc:
+        typer.echo(f"warning: {exc}", err=True)
+        return None
+    if not token or not chat_id:
+        return None
+    return TelegramNotifier(token, chat_id)
 
 
 @app.command()
@@ -93,7 +116,7 @@ def run(
         except ValueError as exc:
             raise typer.BadParameter("expected YYYY-MM-DD", param_hint="--date") from exc
     try:
-        result = pipeline.run(project_root(), force_date=force)
+        result = pipeline.run(project_root(), force_date=force, notifier=_notifier())
     except pipeline.RunLocked as exc:
         typer.echo(f"pi run: {exc}", err=True)
         raise typer.Exit(code=pipeline.EXIT_FAILED) from exc
@@ -108,7 +131,95 @@ def run(
         typer.echo(result.message, err=result.exit_code != 0)
     if result.missing:
         typer.echo("missing: " + ", ".join(d.isoformat() for d in result.missing), err=True)
+    if result.alert:
+        typer.echo(f"alert: {result.alert}", err=True)
+    if result.exit_code == pipeline.EXIT_OK and force is None:
+        # Only a clean scheduled-style run tells the monitor "alive".
+        try:
+            url = secrets.get("heartbeat_url")
+        except secrets.SecretError as exc:
+            url = None
+            typer.echo(f"warning: {exc}", err=True)
+        typer.echo(f"heartbeat: {heartbeat.ping(url).detail}")
     raise typer.Exit(code=result.exit_code)
+
+
+@app.command("notify-test")
+def notify_test() -> None:
+    """Send a 🟡 TEST message to your Telegram chat."""
+    notifier = _notifier()
+    if notifier is None:
+        typer.echo("telegram not configured: pi secret set telegram_bot_token / telegram_chat_id")
+        raise typer.Exit(code=1)
+    try:
+        notifier.send(AlertMessage("yellow", "TEST"))
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo("sent: 🟡 TEST")
+
+
+# --------------------------------------------------------------------------- secrets
+
+
+@secret_app.command("status")
+def secret_status() -> None:
+    """Which secrets are set (values are never shown)."""
+    for name, is_set in secrets.status().items():
+        typer.echo(f"  {name:<20} {'set' if is_set else 'missing'}   {secrets.KNOWN[name]}")
+
+
+@secret_app.command("set")
+def secret_set(name: str) -> None:
+    """Store a secret in the Keychain. The value is typed at a hidden prompt."""
+    if name not in secrets.KNOWN:
+        raise typer.BadParameter(f"known: {', '.join(secrets.KNOWN)}", param_hint="NAME")
+    value = typer.prompt(secrets.KNOWN[name], hide_input=True)
+    if name == "heartbeat_url":
+        try:
+            value = heartbeat.validate_url(value)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+    secrets.put(name, value)
+    typer.echo(f"{name} stored in the Keychain")
+
+
+@secret_app.command("delete")
+def secret_delete(name: str) -> None:
+    """Remove a secret from the Keychain."""
+    secrets.delete(name)
+    typer.echo(f"{name} removed")
+
+
+# --------------------------------------------------------------------------- schedule
+
+
+@schedule_app.command("show")
+def schedule_show() -> None:
+    """Print the LaunchAgent plist that `install` would write."""
+    typer.echo(launchd.render(project_root()).decode())
+    typer.echo(f"# would be written to {launchd.plist_path()}")
+
+
+@schedule_app.command("install")
+def schedule_install() -> None:
+    """Install and load the 19:00 LaunchAgent (writes to ~/Library/LaunchAgents)."""
+    tz = launchd.local_tz_name()
+    if tz != "IST":
+        typer.echo(f"warning: this Mac's time zone is {tz}; 19:00 is local time, not IST")
+    try:
+        path = launchd.install(project_root())
+    except (FileNotFoundError, RuntimeError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"installed {path}; runs daily at 19:00, on wake if missed, and at login")
+
+
+@schedule_app.command("uninstall")
+def schedule_uninstall() -> None:
+    """Unload and remove the LaunchAgent."""
+    removed = launchd.uninstall()
+    typer.echo("removed" if removed else "was not installed")
 
 
 if __name__ == "__main__":  # pragma: no cover

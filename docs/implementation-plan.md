@@ -113,10 +113,18 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
   - Corrections that arrive for a day already completed are flagged in `pi status` until you run `pi run --date`.
   - Limitation: `pi run --date` only *acknowledges* a correction. It does not rewrite that day's security-ID history. It also refuses any date after the last completed day, so it can never jump over missing days.
   - **Only you add holidays**, citing the NSE circular. A holiday declaration changes the Phase 1 exit count, so a coding agent must never add one to clear a pause.
+- **WP 1.5:** built. Every part is inactive until you add your own accounts.
+  - **Scheduler:** `pi schedule show|install|uninstall` manages a LaunchAgent that runs at 19:00 local time, catches up on wake, and runs at login. It calls `.venv/bin/pi run` directly, with logs in `data/logs/`. You run `install` yourself.
+  - **Secrets:** `pi secret set telegram_bot_token|telegram_chat_id|heartbeat_url` prompts for the value with input hidden and stores it in the macOS Keychain.
+  - **Heartbeat:** one bare GET after each clean run (exit 0). It works with any monitor that accepts a plain GET, such as healthchecks.io.
+  - **Telegram:** `AlertMessage` only allows severity, rule and one ticker or date, so amounts can't be sent. A paused, empty or failed run sends 🔴 `DATA_MISSING <date>`, `NO_DATA` or `RUN_FAILED`.
+  - Every alert is recorded in the `alerts` table, even when it can't be delivered. The same alert isn't re-sent within 20 hours.
+  - `pi notify-test` sends 🟡 TEST.
+  - Tests use an in-memory keyring and block all network access.
 - **Not yet built:**
   - WP 1.2, the parsers, which need F1–F3.
-  - WP 1.5, launchd, the heartbeat and Telegram.
   - Until WP 1.2, `pi run` only processes data already in the store.
+- **Install the schedule only once you start dropping files.** Before that, every evening sends 🔴 NO_DATA.
 
 ### 1b: ledger, tax and guard (about 95 h). Runs during the 60-day count.
 
