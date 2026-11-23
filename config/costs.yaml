@@ -1,0 +1,18 @@
+# Broker, exchange and depository charges with effective dates (architecture §11.1).
+# Every figure is unverified until WP 1.9 matches it against real Groww contract notes.
+broker: groww
+schedules:
+  - effective_from: 2025-06-21     # Groww minimum brokerage raised from Rs 2 to Rs 5
+    effective_to: null
+    verified: false
+    source: "groww.in/pricing and chittorgarh.com summary, checked 2026-11-23"
+    brokerage_rate: 0.001          # 0.1% per executed order ...
+    brokerage_max_inr: 20.0        # ... capped at Rs 20 ...
+    brokerage_min_inr: 5.0         # ... with a Rs 5 minimum
+    dp_charge_inr: 20.0            # per stock per sell day, before GST (CDSL 3.50 + Groww 16.50)
+    dp_waived_below_inr: 100.0
+    gst_rate: 0.18                 # on brokerage, DP, exchange and SEBI charges
+    stt_delivery_rate: 0.001       # both buy and sell
+    exchange_txn_rate: 0.0000297   # NSE cash
+    sebi_fee_rate: 0.000001        # Rs 10 per crore
+    stamp_duty_buy_rate: 0.00015   # buy side only

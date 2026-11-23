@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./data/lockbox/**)",
+      "Edit(./data/lockbox/**)",
+      "Edit(./config/gate_spec.yaml)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/hooks/**)",
+      "Bash(pi gate evaluate *)",
+      "Bash(uv run pi gate evaluate *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/research_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

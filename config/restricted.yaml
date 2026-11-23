@@ -1,0 +1,9 @@
+# Insider-trading restricted list (architecture §10.1).
+# Empty: A8 confirmed 2026-11-23 (not a designated person). If that changes, add entries
+# BEFORE the next trade, for example:
+#   - security_id: <id>
+#     basis: designated_person        # or relative_of_dp, holds_upsi
+#     window: quarter_end_to_results_plus_48h
+#     contra_trade_months: 6          # minimum; your company code may be longer
+#     preclearance_threshold_inr: null
+entries: []

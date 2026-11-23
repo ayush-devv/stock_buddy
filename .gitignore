@@ -1,0 +1,26 @@
+# Market data, ledger and databases never go into git (architecture §6).
+data/
+*.duckdb
+*.duckdb.wal
+
+# Your broker statements and CAS: financial history, kept local only (implementation plan §3).
+tests/fixtures/private/
+
+# Secrets and local overrides
+.env
+.env.*
+.claude/settings.local.json
+
+# Python tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.import_linter_cache/
+.hypothesis/
+dist/
+build/
+*.egg-info/
+
+.DS_Store

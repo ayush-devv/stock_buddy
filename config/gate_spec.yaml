@@ -1,0 +1,33 @@
+# Pre-registered go/no-go gate (architecture §14.1).
+# DRAFT. You freeze it by setting registered_at before the first trial in Phase 3; from
+# then on its hash is logged with every trial and coding agents may not edit it.
+spec_version: 1
+registered_at: null
+
+label:
+  horizon_trading_days: 60
+  execution: next_open           # ADR-0013
+  benchmark: nifty500_cross_sectional_median
+  total_return: true
+
+walk_forward:
+  window: expanding
+  purge_trading_days: 60
+  embargo_trading_days: 20
+
+criteria:
+  brier_skill_ci_lower_gt: 0.0
+  ci_level: 0.95
+  bootstrap: month_block
+  auc_gt: 0.5                    # significantly above
+  auc_leakage_alarm: 0.57        # at or above this fails the build
+  decile_spread_after_costs_gt: 0.0
+  report_deflated_sharpe: true
+  report_pbo: true
+
+lockbox:
+  years: 2
+  evaluations_allowed: 1
+  evaluated_by: user_only
+  lockbox_brier_skill_gt: 0.0
+  lockbox_decile_spread_gt: 0.0
