@@ -55,6 +55,7 @@ A private, local tool for one person's NSE delivery portfolio (about ₹20k). Ev
 | A5 | You download NSE files by hand: bhavcopy, the surveillance lists and the index files | Automated collection breaches NSE's terms |
 | A6 | **Approved 2026-11-23:** a **one-month Kite Connect** subscription (₹500) for a one-off historical backfill. Kite Connect logs in with a Zerodha account, so this needs a free Zerodha account that is used only for data. Groww's own API was rejected because its historical data reportedly goes back only about 3 months. | Without it, Phase 3 waits for about 3 years of forward data |
 | A7 | The universe is **NIFTY 500 members as of each date**, plus anything you hold. SME series (SM/ST) are excluded from the model. | Compute only |
+| A9 | Total income stays **under ₹50 lakh**, so no surcharge is modelled on capital-gains tax | Add the surcharge to `tax.yaml` and the tax engine |
 | A8 | **Confirmed 2026-11-23:** you are not a designated person. `restricted.yaml` ships empty. `guard` keeps the rules, because Reg 4 (holding unpublished price-sensitive information) applies to anyone and your status can change. | If that changes, fill in `restricted.yaml` before the next trade |
 
 ## 3. Sizing
@@ -392,7 +393,7 @@ Each alert with a `security_id` is resolved at 20 and 60 days, using excess retu
 | STCG (listed equity, held ≤ 12 months) | 15% → **20%** | 20%: sales on or after 23 Jul 2024 | Verified |
 | LTCG | 10% → **12.5%**; exemption ₹1L → **₹1.25L** per person per year, shared by all equity sales including the ETF | 23 Jul 2024 | Verified |
 | 87A rebate against STCG under the new regime | Not available | FY 2025-26 (FY 2026-27 likely the same) | Partly verified |
-| Buyback, shareholder side | Capital gains before 1 Oct 2024. Deemed dividend with the cost as a capital loss from 1 Oct 2024 to 31 Mar 2026. **Capital gains again from 1 Apr 2026** (Finance Act 2026), with an extra charge for promoters. | 3 periods | Secondary sources |
+| Buyback, shareholder side (listed shares) | **Capital gains** for buybacks announced on or before 5 Jul 2019. **Exempt** under s.10(34A) from then until 30 Sep 2024; the company paid s.115QA tax. **Deemed dividend**, with the cost as a capital loss, from 1 Oct 2024 to 31 Mar 2026. **Capital gains again from 1 Apr 2026** (Finance Act 2026), with an extra charge for promoters. *(Corrected 2026-11-23: v0.2 wrongly said "capital gains before 1 Oct 2024".)* | 4 periods | Secondary sources |
 | Bonus shares | Cost nil; holding period from the allotment date | — | Verified |
 | Demerger | Cost split by the ratio the company announces; holding period includes the original shares | — | Verified |
 | Lot order | FIFO per demat account | — | Verified |

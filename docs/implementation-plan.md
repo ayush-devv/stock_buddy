@@ -148,6 +148,26 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
   - rounding rules and the ₹1 contract-note match, which need your real contract notes (F7);
   - confirming every rate on groww.in/pricing. Until then each schedule stays `verified: false`.
 
+**WP 1.10 status, 2026-11-23: core engine built** (`pi.ledger.tax`).
+- **What it does:**
+  - classifies holding periods: long-term means held *more than* 12 months, with 29 Feb clamped, and same-day trades are speculative;
+  - works out one financial year's tax: set-off by head with the highest rate first, this year's losses before brought-forward ones, the annual LTCG exemption looked up at 31 March, and 4% cess;
+  - gives the marginal tax of a sale, which feeds the §11.1 hurdle and can be negative;
+  - works out the buyback regime;
+  - lists each `tax.yaml` rule a result used, with its confidence.
+- **Corrected while building:** buybacks of listed shares fall into four periods, not three. They were capital gains if announced on or before 5 Jul 2019, then exempt under s.10(34A) until 30 Sep 2024. §12 and `tax.yaml` were fixed.
+- **Not covered:**
+  - slab-rate income (speculative and deemed dividend), which is returned with `needs_slab`;
+  - surcharge (new assumption A9: income under ₹50L);
+  - grandfathered lots bought before Feb 2018;
+  - s.94(7) dividend stripping, which needs WP 1.8;
+  - expiry of carried-forward losses.
+- **For the yearly CA review:** the cases in `tests/test_tax.py`, each with its legal basis. Especially:
+  - a brought-forward loss is used before the exemption;
+  - the ₹1.25L exemption applies to all of FY 2024-25;
+  - DP charge as a transfer expense (`dp_charge_is_transfer_expense`, marked unverified);
+  - the April 2026 buyback rule, which rests on a secondary source.
+
 **Tax items marked [unverified]** in §12 of the architecture (the carry-forward period, the s.94(7) windows, and section numbers under the 2025 Act) go into `tax.yaml` with a `confidence: unverified` flag. Take them to the yearly CA review rather than researching them now.
 
 **Phase 1 exit (§17, unchanged):** 60 clean days; the ledger matches the broker exactly; contract notes match within ₹1 excluding DP; tax P&L matches; A8 is already confirmed (2026-11-23).

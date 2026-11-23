@@ -1,6 +1,14 @@
 # Dated tax rules (architecture §12). Not tax advice; review with a CA once a year.
 # confidence: verified | secondary | partly | unverified
 # For each id, date ranges must not overlap. effective_to is inclusive; null means open-ended.
+#
+# Which date a rule is looked up on (pi.ledger.tax applies this):
+#   stcg_rate, ltcg_rate      -> the sale date (rates changed mid-year on 23 Jul 2024)
+#   ltcg_exemption_inr        -> the END of the financial year (31 Mar): it is one annual limit
+#   cess_rate, stcg_87a_rebate -> the end of the financial year
+#   buyback_regime            -> the public-announcement date if on/before 2019-07-05,
+#                                otherwise the date the shares are bought back
+# Assumption A9: total income under Rs 50 lakh, so no surcharge is modelled.
 rules:
   - {id: stcg_rate, value: 0.15, effective_from: 2008-04-01, effective_to: 2024-07-22, confidence: verified, source: "s.111A"}
   - {id: stcg_rate, value: 0.20, effective_from: 2024-07-23, effective_to: null, confidence: verified, source: "Finance (No. 2) Act 2024"}
@@ -8,12 +16,14 @@ rules:
   - {id: ltcg_rate, value: 0.125, effective_from: 2024-07-23, effective_to: null, confidence: verified, source: "Finance (No. 2) Act 2024"}
   - {id: ltcg_exemption_inr, value: 100000, effective_from: 2018-04-01, effective_to: 2024-07-22, confidence: verified, source: "s.112A"}
   - {id: ltcg_exemption_inr, value: 125000, effective_from: 2024-07-23, effective_to: null, confidence: secondary, source: "Finance (No. 2) Act 2024; FY 2024-25 split-year treatment to confirm with CA"}
-  - {id: ltcg_holding_months, value: 12, effective_from: 2018-04-01, effective_to: null, confidence: verified, source: "listed equity"}
+  - {id: ltcg_holding_months, value: 12, effective_from: 2001-04-01, effective_to: null, confidence: verified, source: "listed equity"}
   - {id: cess_rate, value: 0.04, effective_from: 2018-04-01, effective_to: null, confidence: verified, source: "Health and education cess"}
   - {id: stcg_87a_rebate, value: false, effective_from: 2025-04-01, effective_to: null, confidence: partly, source: "New regime, FY 2025-26; FY 2026-27 assumed same"}
-  - {id: buyback_regime, value: capital_gains, effective_from: 2013-06-01, effective_to: 2024-09-30, confidence: secondary, source: "Company paid s.115QA; shareholder exempt"}
+  - {id: buyback_regime, value: capital_gains, effective_from: 2001-04-01, effective_to: 2019-07-05, confidence: secondary, source: "Listed shares: s.115QA covered only unlisted companies until Finance (No. 2) Act 2019"}
+  - {id: buyback_regime, value: exempt_s10_34a, effective_from: 2019-07-06, effective_to: 2024-09-30, confidence: secondary, source: "Company pays s.115QA; shareholder exempt under s.10(34A) (Finance (No. 2) Act 2019)"}
   - {id: buyback_regime, value: deemed_dividend, effective_from: 2024-10-01, effective_to: 2026-03-31, confidence: secondary, source: "Finance (No. 2) Act 2024; cost becomes a capital loss"}
   - {id: buyback_regime, value: capital_gains, effective_from: 2026-04-01, effective_to: null, confidence: secondary, source: "Finance Act 2026; extra charge for promoters"}
+  - {id: dp_charge_is_transfer_expense, value: true, effective_from: 2018-04-01, effective_to: null, confidence: unverified, source: "Assumed deductible as an expense of transfer; confirm at CA review"}
   - {id: lot_order, value: fifo_per_demat, effective_from: 2018-04-01, effective_to: null, confidence: verified, source: "CBDT Circular 768"}
   - {id: loss_carry_forward_years, value: 8, effective_from: 2018-04-01, effective_to: null, confidence: unverified, source: "s.74; confirm at CA review"}
   - {id: same_day_delivery_sale, value: speculative_business_income, effective_from: 2018-04-01, effective_to: null, confidence: secondary, source: "s.43(5)"}
