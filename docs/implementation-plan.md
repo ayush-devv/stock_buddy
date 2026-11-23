@@ -134,11 +134,42 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 | 1.7 | **Groww `BrokerAdapter`:**<br>• **Spike (2 h)** to find which reports Groww exports, in which formats, and whether the order history covers your whole account life<br>• parsers for order history, holdings, contract notes and the P&L report<br>• a CDSL CAS parser for an independent holdings check | Golden files from F7. Holdings from Groww match holdings from the CAS. | 1.1, F7 |
 | 1.8 | **Ledger:**<br>• `trades` and `ledger_entries`<br>• ledger entries for corporate actions: bonus, split, demerger with cost apportionment, rights entitlement, buyback, merger<br>• `credit_date` for each entry<br>• FIFO lots per demat<br>• opening lots from the full tradebook, or from a manual opening-lot file | Property tests (`hypothesis`): after any sequence of trades and corporate actions, the lots add up to the holdings and the cost is conserved. Matches the broker holdings exactly. | 1.6, 1.7 |
 | 1.9 | **Costs:** `costs.yaml` with dated entries for each charge:<br>• Groww delivery brokerage: ₹20 or 0.1% per order, whichever is lower, minimum ₹5<br>• STT, exchange and SEBI fees, stamp duty, GST<br>• Groww DP charge: ₹20 + GST per stock per sell day<br>Confirm every figure on groww.in/pricing and check whether the DP charge appears on Groww's contract note | Each contract note is matched within ₹1, **excluding DP**. DP appears on the ledger. | 1.8 |
-| 1.10 | **Tax:**<br>• `tax.yaml` with dated rules (§12 of the architecture)<br>• STCG and LTCG, with the ₹1.25L exemption shared with the ETF shadow<br>• the three buyback periods, bonus, demerger and loss set-off<br>• the speculative rule for same-day sells, and s.94(7) | Hand-worked cases for every row of §12. Results match the broker's tax P&L report. | 1.8, 1.9 |
-| 1.11 | **ETF shadow:** a paper portfolio of NIFTY 500 ETF lots that draws on the same LTCG headroom | Its headroom is shared with real sales | 1.10 |
+| 1.10 | **Tax:**<br>• `tax.yaml` with dated rules (§12 of the architecture)<br>• STCG and LTCG, with the ₹1.25L exemption shared by every real sale, including real ETF lots<br>• the buyback periods, bonus, demerger and loss set-off<br>• the speculative rule for same-day sells, and s.94(7) | Hand-worked cases for every row of §12. Results match the broker's tax P&L report. | 1.8, 1.9 |
+| 1.11 | **ETF benchmark** (the "shadow"): a counterfactual NIFTY 500 ETF portfolio that mirrors your *net* cash flows, for the after-tax comparison in requirement F4. Its tax is computed in its own world, with its own ₹1.25L limit. It never feeds the hurdle, the guard or your real tax. *(Corrected 2026-11-23: earlier wording said it shares your real headroom. Only real ETF lots, bought after a TRIM, do that, and they are ordinary ledger lots.)* | A same-day sale of A and purchase of B doesn't trade the benchmark. Its tax is separate from real tax. | 1.10 |
 | 1.12 | **Spike (2 h):** what format the surveillance lists come in. Then ingest `surveillance` and `price_bands`. | Golden file F6. A stage change creates a row with a new `effective_from`. | 1.3, F6 |
 | 1.13 | **Guard:**<br>• `restricted.yaml`: trading window, 6-month contra rule, pre-clearance<br>• surveillance stage, price band and lower circuit<br>• quantity not yet credited<br>• same-day sell warning, SME lot size | One unit test per rule. The import contract shows `decide` cannot skip `guard`. | 1.8, 1.12 |
 | 1.14 | Reconciliation: the ledger is compared with the broker after corporate-action entries are applied, and a 🔴 alert fires on a mismatch | A corporate-action credit that hasn't arrived yet does **not** raise a false alert | 1.8, 1.5 |
+
+**WP 1.8 status, 2026-11-23: core engine built on made-up trades** (`pi.ledger.book`).
+- **How it works:**
+  - it's a pure replay: entries in, FIFO lots and realized slices out;
+  - money is `Decimal`, booked to the paisa, and cost is conserved exactly. A property test checks this on random buys, sells, splits and bonuses;
+  - FIFO follows the date shares entered the demat, and the holding period runs from acquisition;
+  - same-day buys are matched first and treated as speculative (to confirm at the CA review);
+  - STT is never part of cost, and the DP charge is an expense according to `tax.yaml`.
+- **Corporate actions:**
+  - split and consolidation;
+  - bonus: cost nil, held from allotment;
+  - demerger: announced cost fraction, parent's dates;
+  - merger;
+  - buyback in all regimes: capital gains, exempt, or deemed dividend, where the proceeds are slab income and the cost becomes a capital loss.
+- **Never guesses:** selling more than you hold, or a fractional entitlement, raises `LedgerError`.
+- **Gives the guard** `credited_qty`, `bought_on` and `last_trade`. **Gives the tax engine** `realized_gains`.
+- **Deferred:**
+  - persistence tables, which arrive with the Groww importer (WP 1.7) as new `MIGRATIONS` steps;
+  - rights entitlements;
+  - cash in lieu of fractional shares;
+  - s.94(7).
+
+**WP 1.11 status, 2026-11-23: built** (`pi.ledger.benchmark`).
+- The ETF benchmark mirrors **net cash flow per day**, so a same-day switch from A to B doesn't trade it. It buys whole units with ETF charges.
+- Its tax is computed in its own world.
+- `after_tax_value` sells out any book: charges, the DP charge, and the extra tax on that book's own year. Use it on the real book and on the benchmark for F4.
+- **Limitations:**
+  - your stocks' dividends are not mirrored;
+  - proceeds reinvested a few days later still make the benchmark trade;
+  - the benchmark needs an ETF price series, which arrives with Phase 2 data;
+  - `costs.yaml` currently starts on 21 Jun 2025. Add earlier Groww schedules if your history goes back further, because the engine refuses to guess charges.
 
 **WP 1.9 status, 2026-11-23: engine built.**
 - `pi.ledger.costs` calculates per-order charges and the DP charge, which applies per stock per sell day and is waived below ₹100. It also calculates the cost of selling a stock and moving the proceeds into the ETF.

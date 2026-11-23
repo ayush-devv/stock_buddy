@@ -181,9 +181,10 @@ def test_negative_carry_forward_is_refused() -> None:
 
 
 def test_marginal_tax_of_a_gain_counts_the_shared_headroom() -> None:
-    """The Rs 1.25 lakh limit is shared with every other equity sale, including the ETF
-    shadow (architecture §11.1, E6)."""
-    existing = [lt(FY26, 120_000)]  # e.g. ETF shadow gains already realized this year
+    """The Rs 1.25 lakh limit is shared by every real equity sale in the year, including
+    sales of real ETF lots (architecture §11.1, E6). The counterfactual ETF benchmark
+    (WP 1.11) is never included here."""
+    existing = [lt(FY26, 120_000)]  # e.g. real gains already realized this year
     extra = marginal_tax(existing, [lt(FY26, 20_000)], TAX, 2026)
     assert extra == approx(15_000 * 0.125 * 1.04)  # 1,950: only 5,000 of headroom was left
 
