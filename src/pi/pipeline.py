@@ -210,9 +210,9 @@ def run(
     with run_lock(paths.lock_path):
         con = db.connect(paths.db_path)
         try:
-            db.ensure_schema(con, db.CORE_DDL)
-            db.ensure_schema(con, securities.DDL)
-            db.ensure_schema(con, run_alerts.DDL)
+            db.migrate(con, "core", db.CORE_MIGRATIONS, now)
+            db.migrate(con, "refdata", securities.MIGRATIONS, now)
+            db.migrate(con, "alerts", run_alerts.MIGRATIONS, now)
             run_id = uuid4().hex
             present = set(store.partitions("bhavcopy"))
             try:

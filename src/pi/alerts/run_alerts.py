@@ -18,18 +18,25 @@ from pi.store.clock import require_aware
 
 COOLDOWN = timedelta(hours=20)
 
+# Columns follow architecture §7. security_id, rules_ver, payload_json and acked_at are
+# filled by the alert rules of WP 2.4 and scored per §11.4; run alerts leave them NULL.
 DDL = (
     """CREATE TABLE IF NOT EXISTS alerts (
         alert_id VARCHAR PRIMARY KEY,
         rule_id VARCHAR NOT NULL,
+        rules_ver VARCHAR,
         severity VARCHAR NOT NULL,
+        security_id INTEGER,
         subject VARCHAR,
         fired_at TIMESTAMPTZ NOT NULL,
         mode VARCHAR NOT NULL,
+        payload_json VARCHAR,
         delivered BOOLEAN NOT NULL,
-        error VARCHAR
+        error VARCHAR,
+        acked_at TIMESTAMPTZ
     )""",
 )
+MIGRATIONS: tuple[tuple[str, ...], ...] = (DDL,)
 
 
 class Notifier(Protocol):
@@ -67,7 +74,8 @@ def fire(
         except Exception as exc:  # delivery problems must never break the run
             error = str(exc)
     con.execute(
-        "INSERT INTO alerts VALUES (?, ?, ?, ?, ?, 'live', ?, ?)",
+        "INSERT INTO alerts (alert_id, rule_id, severity, subject, fired_at, mode, delivered, "
+        "error) VALUES (?, ?, ?, ?, ?, 'live', ?, ?)",
         [uuid4().hex, message.rule, message.severity, message.subject, now, delivered, error],
     )
     return "delivered" if delivered else f"not delivered: {error}"

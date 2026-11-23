@@ -75,8 +75,8 @@ def test_holiday_yaml_key_is_date() -> None:
 @pytest.fixture
 def con(tmp_path: Path) -> Iterator[duckdb.DuckDBPyConnection]:
     c = db.connect(tmp_path / "pi.duckdb")
-    db.ensure_schema(c, db.CORE_DDL)
-    db.ensure_schema(c, sec.DDL)
+    db.migrate(c, "core", db.CORE_MIGRATIONS)
+    db.migrate(c, "refdata", sec.MIGRATIONS)
     yield c
     c.close()
 

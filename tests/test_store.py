@@ -174,7 +174,7 @@ def test_range_filter_and_partitions(store: RawStore) -> None:
 
 def test_state_round_trip(tmp_path: Path) -> None:
     con = db.connect(tmp_path / "pi.duckdb")
-    db.ensure_schema(con, db.CORE_DDL)
+    db.migrate(con, "core", db.CORE_MIGRATIONS)
     assert db.get_state(con, "k") is None
     db.set_state(con, "k", "v1")
     db.set_state(con, "k", "v2")
@@ -182,10 +182,44 @@ def test_state_round_trip(tmp_path: Path) -> None:
     con.close()
 
 
+STEP1 = ("CREATE TABLE t (id INTEGER)",)
+STEP2 = ("ALTER TABLE t ADD COLUMN note VARCHAR",)
+
+
+def test_migration_adds_columns_and_keeps_rows(tmp_path: Path) -> None:
+    con = db.connect(tmp_path / "pi.duckdb")
+    assert db.migrate(con, "demo", [STEP1]) == 1
+    con.execute("INSERT INTO t VALUES (7)")
+    assert db.migrate(con, "demo", [STEP1, STEP2]) == 2  # a later release adds a column
+    assert con.execute("SELECT id, note FROM t").fetchall() == [(7, None)]
+    assert db.migrate(con, "demo", [STEP1, STEP2]) == 2  # re-running is a no-op
+    assert db.get_state(con, "schema:demo") == "2"
+    con.close()
+
+
+def test_a_failed_step_rolls_back_and_keeps_the_old_version(tmp_path: Path) -> None:
+    con = db.connect(tmp_path / "pi.duckdb")
+    db.migrate(con, "demo", [STEP1])
+    bad = ("ALTER TABLE t ADD COLUMN ok VARCHAR", "ALTER TABLE nope ADD COLUMN x INTEGER")
+    with pytest.raises(Exception, match="nope"):
+        db.migrate(con, "demo", [STEP1, bad])
+    assert db.get_state(con, "schema:demo") == "1"
+    assert [c[0] for c in con.execute("DESCRIBE t").fetchall()] == ["id"]
+    con.close()
+
+
+def test_a_database_from_newer_code_is_refused(tmp_path: Path) -> None:
+    con = db.connect(tmp_path / "pi.duckdb")
+    db.migrate(con, "demo", [STEP1, STEP2])
+    with pytest.raises(db.SchemaError, match="newer code"):
+        db.migrate(con, "demo", [STEP1])
+    con.close()
+
+
 def test_snapshot_is_readable_and_does_not_block_the_writer(tmp_path: Path) -> None:
     path, snap = tmp_path / "pi.duckdb", tmp_path / "pi_read.duckdb"
     con = db.connect(path)
-    db.ensure_schema(con, db.CORE_DDL)
+    db.migrate(con, "core", db.CORE_MIGRATIONS)
     db.set_state(con, "gate_state", "NOT_EVALUATED")
     con.execute("CHECKPOINT")
     con.close()

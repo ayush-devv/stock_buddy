@@ -78,6 +78,9 @@ DDL = (
 )
 
 
+MIGRATIONS: tuple[tuple[str, ...], ...] = (DDL,)
+
+
 class RefdataError(Exception):
     pass
 

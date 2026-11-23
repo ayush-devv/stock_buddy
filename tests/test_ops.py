@@ -143,7 +143,7 @@ class FakeNotifier:
 @pytest.fixture
 def con(tmp_path: Path):
     c = db.connect(tmp_path / "pi.duckdb")
-    db.ensure_schema(c, run_alerts.DDL)
+    db.migrate(c, "alerts", run_alerts.MIGRATIONS)
     yield c
     c.close()
 
@@ -290,3 +290,27 @@ def test_cli_run_pings_only_after_a_clean_run(
     result = runner.invoke(app, ["run"])  # no data: paused, exit 3
     assert result.exit_code == 3 and pinged == []
     assert "alert: not delivered: telegram not configured" in result.output
+
+
+def test_cli_clean_run_pings_once_and_forced_rerun_does_not(
+    config_copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.test_pipeline import drop, ist
+
+    project = config_copy.parent
+    monkeypatch.setenv("PI_HOME", str(project))
+    secrets.put("heartbeat_url", "https://hc.example/ping/abc")
+    pinged: list[str] = []
+    monkeypatch.setattr("pi.ops.heartbeat._get", lambda url: pinged.append(url) or 200)
+    thu = date(2026, 11, 19)
+    drop(project, thu)
+    monkeypatch.setattr("pi.pipeline.utc_now", lambda: ist(thu, 19).astimezone())
+
+    result = runner.invoke(app, ["run"])
+    assert result.exit_code == 0, result.output
+    assert pinged == ["https://hc.example/ping/abc"]
+    assert "heartbeat: pinged (200)" in result.output
+
+    result = runner.invoke(app, ["run", "--date", thu.isoformat()])
+    assert result.exit_code == 0, result.output
+    assert pinged == ["https://hc.example/ping/abc"]  # a manual re-run is not a heartbeat
