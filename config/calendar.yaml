@@ -1,0 +1,11 @@
+# NSE Capital Market trading holidays that fall on weekdays (architecture §7, WP 1.1).
+#
+# A day counts as a trading day if its bhavcopy exists; this list is used only to tell
+# "holiday" apart from "file missing". Copy each year's dates from NSE's Capital Market
+# trading-holiday circular (and any amendments). If the evening run pauses on a missing
+# day that was really a holiday, add it here: the pause clears and the 60-day count
+# repairs itself.
+#
+# Entry format:
+#   - {date: 2026-12-25, name: Christmas, source: "NSE circular <number>"}
+holidays: []

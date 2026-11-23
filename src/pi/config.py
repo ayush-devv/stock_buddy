@@ -17,7 +17,7 @@ from typing import Any, Literal, Protocol
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-CONFIG_FILES = ("rules", "costs", "tax", "restricted", "gate_spec")
+CONFIG_FILES = ("rules", "costs", "tax", "restricted", "gate_spec", "calendar")
 
 
 class ConfigError(Exception):
@@ -222,6 +222,32 @@ class GateSpec(_Strict):
         return self.registered_at is not None
 
 
+# --------------------------------------------------------------------------- calendar.yaml
+
+
+class Holiday(_Strict):
+    day: date = Field(alias="date")  # YAML key is `date`; renamed to avoid shadowing the type
+    name: str
+    source: str
+
+
+class CalendarConfig(_Strict):
+    holidays: list[Holiday]
+
+    @model_validator(mode="after")
+    def _unique(self) -> CalendarConfig:
+        seen: set[date] = set()
+        for h in self.holidays:
+            if h.day in seen:
+                raise ValueError(f"holiday {h.day} listed twice")
+            seen.add(h.day)
+        return self
+
+    @property
+    def holiday_dates(self) -> frozenset[date]:
+        return frozenset(h.day for h in self.holidays)
+
+
 # --------------------------------------------------------------------------- loading
 
 _MODELS: dict[str, type[BaseModel]] = {
@@ -230,6 +256,7 @@ _MODELS: dict[str, type[BaseModel]] = {
     "tax": TaxConfig,
     "restricted": RestrictedConfig,
     "gate_spec": GateSpec,
+    "calendar": CalendarConfig,
 }
 
 
@@ -278,6 +305,7 @@ class Configs:
     tax: TaxConfig
     restricted: RestrictedConfig
     gate_spec: GateSpec
+    calendar: CalendarConfig
     versions: dict[str, str]
 
 
@@ -290,5 +318,6 @@ def load_all(config_dir: Path | None = None) -> Configs:
         tax=loaded["tax"].model,
         restricted=loaded["restricted"].model,
         gate_spec=loaded["gate_spec"].model,
+        calendar=loaded["calendar"].model,
         versions={name: item.version for name, item in loaded.items()},
     )
