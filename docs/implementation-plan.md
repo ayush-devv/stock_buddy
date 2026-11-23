@@ -289,6 +289,28 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 
 ## 8. Phase 3: research (about 95 h). Needs the Kite backfill, which is approved. It can overlap with Phase 2.
 
+**WP 3.5 status, 2026-11-23: harness built, and inactive by design** (`pi.research.harness`, `loader`, `splits`, `lockbox`).
+- **`run_trial` refuses to run** unless:
+  - `gate_spec.yaml` is registered (you set `registered_at`);
+  - the spec's hash matches the first trial on the current lockbox;
+  - an unused lockbox is sealed;
+  - the trial log verifies.
+- **None of those is true today, so no trial can run.** Before Phase 3:
+  1. add `auc_ci_lower_gt: 0.5`;
+  2. freeze the spec by setting `registered_at`;
+  3. run the backfill (WP 3.1), which seals the lockbox.
+- **Trial log** (`data/research.duckdb`, never `pi.duckdb`):
+  - a `started` row is committed before the evaluation runs;
+  - every started row counts, including failures;
+  - it records the config hash, spec hash, feature-set version, data window, git SHA, a dirty flag and a hash of the diff;
+  - it's append-only and hash-chained. `verify_chain` detects edited or deleted rows. Removing the newest rows can't be detected from inside the file, so it's a guard rail, not a vault.
+- **Lockbox = date cutoff plus sealed copy.**
+  - The research loader never returns a row on or after the lockbox start.
+  - It reads data as known on the day before the lockbox, so later corrections can't leak in.
+  - It allows only sample dates whose whole label window ends before the lockbox.
+  - A new import contract stops `pi.model` importing `pi.store`, and a source scan keeps `research/` scripts off it too.
+- **Walk-forward folds:** counted in trading-day indices. A training sample j is used only if `j + 1 + purge + embargo <= first test day`. Purge and embargo come from the spec, and the spec now requires purge ≥ label horizon.
+
 | WP | Builds | Tests | Depends on |
 |---|---|---|---|
 | 3.1 | **Backfill loader** from Kite Connect, using one paid month on a data-only Zerodha account:<br>• **Spike (2 h):** do Kite's daily candles already include split and bonus adjustments? If yes, store them with `price_basis = adjusted` and skip the read-time adjustment for those rows. Dividends always come from `corp_actions`.<br>• download the full daily history of all current NIFTY 500 names, plus your holdings, within the month<br>• `known_at_synthetic = true` on every row<br>• the survivorship gap is recorded in the gate report<br>• **the lockbox is sealed on load:** the most recent ~2 years go to `data/lockbox/`, and their hash goes into `system_state` | The research loader refuses lockbox dates. The seal hash is stable. | 1.3, Zerodha account |

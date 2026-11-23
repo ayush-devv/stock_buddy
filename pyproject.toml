@@ -92,3 +92,9 @@ source_modules = [
     "pi.ops",
 ]
 forbidden_modules = ["pi.research.lockbox"]
+
+[[tool.importlinter.contracts]]
+name = "Models read data only through the research loader (§14.2)"
+type = "forbidden"
+source_modules = ["pi.model"]
+forbidden_modules = ["pi.store"]

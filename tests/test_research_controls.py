@@ -60,6 +60,41 @@ def test_only_research_package_names_the_holdout_path() -> None:
     assert offenders == []
 
 
+def store_imports(source: str) -> list[int]:
+    """Line numbers that import pi.store (research scripts must use the research loader)."""
+    hits = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            names = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [node.module or ""] + [f"{node.module}.{a.name}" for a in node.names]
+        else:
+            continue
+        if any(n == "pi.store" or n.startswith("pi.store.") for n in names):
+            hits.append(node.lineno)
+    return hits
+
+
+def test_research_scripts_never_read_the_store_directly() -> None:
+    research_dir = ROOT / "research"
+    offenders = []
+    if research_dir.is_dir():
+        for path in research_dir.rglob("*.py"):
+            if lines := store_imports(path.read_text()):
+                offenders.append(f"{path}:{lines}")
+        for path in research_dir.rglob("*.ipynb"):
+            if "pi.store" in path.read_text() or "from pi import store" in path.read_text():
+                offenders.append(str(path))
+    assert offenders == []
+
+
+@pytest.mark.parametrize(
+    "planted", ["import pi.store.raw", "from pi.store.raw import RawStore", "from pi import store"]
+)
+def test_store_import_scanner_catches_planted_imports(planted: str) -> None:
+    assert store_imports(planted) == [1]
+
+
 @pytest.mark.parametrize(
     "planted",
     [

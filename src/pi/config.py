@@ -226,6 +226,12 @@ class GateSpec(_Strict):
     criteria: GateCriteria
     lockbox: GateLockbox
 
+    @model_validator(mode="after")
+    def _purge_covers_the_label(self) -> GateSpec:
+        if self.walk_forward.purge_trading_days < self.label.horizon_trading_days:
+            raise ValueError("purge_trading_days must be at least the label horizon")
+        return self
+
     @property
     def is_registered(self) -> bool:
         return self.registered_at is not None
