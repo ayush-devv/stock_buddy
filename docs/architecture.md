@@ -185,7 +185,7 @@ FNO/
 **Rules:**
 - Every fact row carries `event_date` and `known_at`.
 - Every query for date D filters on `known_at ≤ D`.
-- Raw rows are never updated. A correction is a new row with a higher `ingest_seq`, and views take the latest row known as of D.
+- Raw files are never updated. A re-issued exchange file is a new **version of the whole day** for that source, with a higher `ingest_seq`. Views take, per day, the latest version known as of D, so rows dropped from a correction disappear from it too. The first version's `known_at` follows the §8 convention. A correction's `known_at` is its real arrival time, and `ingested_at` always records the real arrival time. (Implemented in WP 1.3, 2026-11-23.)
 - The primary key for a security is `security_id`, never ISIN or symbol.
 
 | Table | Key | Main columns | Notes |

@@ -47,6 +47,7 @@ I can't download from NSE, and the parsers can't be called done without real sam
 | F4 | A bhavcopy covering a split or bonus ex-date, plus the corporate-action file | WP 1.1, 1.6 | Tests that the ISIN change keeps the same `security_id` |
 | F5 | NIFTY 500 index and TRI file | WP 2.1 | |
 | F6 | The surveillance lists (ASM, GSM, ESM) as you can download them | WP 1.12 | Their format is unverified (open question 5) |
+| F0 | NSE's Capital Market **trading-holiday circular** for 2026, plus any amendments (for example the 15 Jan 2026 closure); add 2027 once it's published | WP 1.1 | Copy the weekday dates into `config/calendar.yaml`. Until then, every holiday pauses the evening run as a "missing day". |
 | F7 | From Groww: **all** order history since you opened the account, a holdings statement, the stocks P&L report for each financial year, and 2 contract notes. From CDSL: one CAS statement. | WP 1.7, 1.8 | Before saving, remove your name, client ID and PAN. The CAS is an independent check on holdings that doesn't depend on Groww. |
 
 ## 4. How each work package is run
@@ -95,6 +96,26 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 | 1.5 | **Operations:**<br>• launchd plist with a 19:00 calendar trigger and `RunAtLoad`<br>• heartbeat ping on success, carrying no data<br>• Telegram 🔴 DATA alert, with the token in Keychain | It fires after sleep and after login. Stopping the job produces a missed-ping email. A missing file produces a Telegram alert with only the ticker, rule and severity. | 1.4 |
 
 **Exit 1a:** 5 consecutive real trading days processed by launchd with no manual steps besides dropping files. **The 60-day count starts here.**
+
+**Status, 2026-11-23** (branch `phase-1a/core`):
+- **WP 1.1:** built, except the golden-file test, which needs F4.
+  - The calendar reads `config/calendar.yaml`, which is empty until F0 is filled in.
+  - A security gets its ID once.
+  - A new ISIN under an existing symbol gets a *provisional* ID and an open issue. It is never guessed.
+  - `link_isin` merges the provisional ID through an alias, so the retired ID still resolves.
+- **WP 1.3:** built.
+  - A correction replaces the whole day for its source. The same file dropped twice creates no new version.
+  - Each version records both `known_at` and the real `ingested_at`.
+- **WP 1.4:** built.
+  - Each day is processed as one transaction.
+  - A missing day pauses the run (exit 3), and the message names both fixes.
+  - The 60-day streak is recomputed from the run log on every run, so declaring a forgotten holiday repairs it.
+  - Corrections that arrive for a day already completed are flagged in `pi status` until you run `pi run --date`.
+  - Limitation: re-running a past date does not rewrite its security-ID history.
+- **Not yet built:**
+  - WP 1.2, the parsers, which need F1–F3.
+  - WP 1.5, launchd, the heartbeat and Telegram.
+  - Until WP 1.2, `pi run` only processes data already in the store.
 
 ### 1b: ledger, tax and guard (about 95 h). Runs during the 60-day count.
 

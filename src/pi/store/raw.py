@@ -149,6 +149,18 @@ class RawStore:
                 )
         return sorted(out, key=lambda v: v.ingest_seq)
 
+    def corrections(self, source: str) -> list[Version]:
+        """Every version after the first (re-issued files), across all dates."""
+        self._source(source)
+        dates = sorted(
+            {
+                date.fromisoformat(m.group(1))
+                for p in self._files(source)
+                if (m := _FILE_RE.match(p.name)) and int(m.group(2)) > 1
+            }
+        )
+        return [v for d in dates for v in self.versions(source, d) if v.ingest_seq > 1]
+
     def partitions(self, source: str) -> list[date]:
         """Every partition date that has at least one version, whenever it arrived."""
         self._source(source)

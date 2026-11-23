@@ -30,10 +30,27 @@ def test_status_fails_on_invalid_config(config_copy: Path, monkeypatch: pytest.M
     assert "INVALID" in result.output
 
 
-def test_run_stub_never_reports_success() -> None:
-    result = runner.invoke(app, ["run", "--date", "2026-11-23"])
-    assert result.exit_code == 2
-    assert "not implemented" in result.output
+def test_run_without_data_exits_paused_and_status_reads_the_snapshot(
+    config_copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PI_HOME", str(config_copy.parent))  # a temp project, never the real one
+    result = runner.invoke(app, ["run"])
+    assert result.exit_code == 3, result.output
+    assert "no_data" in result.output
+
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 0, result.output
+    assert "last run:   no_data" in result.output
+    assert "clean streak: 0 / 60" in result.output
+    assert "no holidays listed" in result.output
+
+
+def test_run_rejects_an_invalid_config(config_copy: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (config_copy / "calendar.yaml").write_text("holidays: nope\n")
+    monkeypatch.setenv("PI_HOME", str(config_copy.parent))
+    result = runner.invoke(app, ["run"])
+    assert result.exit_code == 1
+    assert "invalid config" in result.output
 
 
 def test_run_rejects_a_bad_date() -> None:

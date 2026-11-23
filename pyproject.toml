@@ -56,7 +56,7 @@ name = "Layering: lower layers never import higher ones"
 type = "layers"
 layers = [
     "pi.cli",
-    "pi.ui",
+    "pi.pipeline | pi.ui",
     "pi.alerts | pi.evaluate",
     "pi.decide",
     "pi.research",
@@ -72,6 +72,7 @@ layers = [
 name = "Only pi.research may reach the lockbox loader (§14.2)"
 type = "forbidden"
 source_modules = [
+    "pi.pipeline",
     "pi.ui",
     "pi.alerts",
     "pi.evaluate",
