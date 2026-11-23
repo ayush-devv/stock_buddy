@@ -427,6 +427,15 @@ class _Engine:
 
 def build(entries: list[Entry], tax: TaxConfig) -> Book:
     """Replay entries (in date order; corporate actions before that day's trades)."""
+    # The DP charge is billed once per stock, demat and sell day. Exactly one Sell entry may
+    # carry it; two would silently double-count it in expenses and in cash flows.
+    dp_days: set[tuple[int, str, date]] = set()
+    for e in entries:
+        if isinstance(e, Sell) and e.dp_charge:
+            key = (e.security, e.demat, e.trade_date)
+            if key in dp_days:
+                raise LedgerError(f"DP charge recorded twice for {key}; put it on one Sell only")
+            dp_days.add(key)
     engine = _Engine(tax)
     ordered = sorted(
         enumerate(entries), key=lambda ie: (_date_of(ie[1]), _RANK[type(ie[1])], ie[0])

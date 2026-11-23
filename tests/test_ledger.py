@@ -121,6 +121,14 @@ def test_fifo_follows_the_date_shares_entered_the_demat() -> None:
     assert book.open_lots(A)[0].cost == D("0")  # only the bonus lot remains
 
 
+def test_dp_charge_may_ride_on_only_one_sell_per_stock_and_day() -> None:
+    d = date(2026, 6, 1)
+    entries = [buy(date(2026, 1, 5), 10, "100"), sell(d, 4, "110", dp="23.60"), sell(d, 6, "111")]
+    assert len(build(entries, TAX).slices) == 2  # two orders, one DP charge: fine
+    with pytest.raises(LedgerError, match="DP charge recorded twice"):
+        build([*entries[:2], sell(d, 6, "111", dp="23.60")], TAX)
+
+
 def test_selling_more_than_held_never_invents_a_lot() -> None:
     with pytest.raises(LedgerError, match="only 10 held"):
         build([buy(date(2026, 1, 5), 10, "100"), sell(date(2026, 2, 1), 11, "100")], TAX)

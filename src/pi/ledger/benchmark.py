@@ -29,7 +29,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from pi.config import CostsConfig, TaxConfig
 from pi.ledger.book import Book, Buy, Buyback, Entry, Opening, Sell, build
-from pi.ledger.costs import dp_charge, order_charges
+from pi.ledger.costs import Instrument, dp_charge, order_charges
 from pi.ledger.tax import RealizedGain, compute_fy, fy_bounds, fy_start_year, holding_kind
 
 ETF_ID = -1  # the benchmark's only security
@@ -96,7 +96,7 @@ def mirror(
                 bench.append(Buy(ETF_ID, demat, d, n, price, charges, d, stt))
                 cash -= _q(n * price + charges + stt)
                 units += n
-        else:
+        elif cash < 0:
             need, n = -cash, 0
             while n < units:
                 n += 1
@@ -125,9 +125,14 @@ def after_tax_value(
     on: date,
     costs: CostsConfig,
     tax: TaxConfig,
+    instrument_of: Callable[[int], Instrument] | None = None,
 ) -> Decimal:
     """What the book is worth if sold out on `on`, after charges and the extra tax that
-    sale would add to this book's own financial year."""
+    sale would add to this book's own financial year.
+
+    `instrument_of` says which securities are ETFs (refdata supplies it: ETF units have
+    INF... ISINs, shares INE...). Without it, only the benchmark's own ETF_ID is an ETF."""
+    instrument_of = instrument_of or (lambda s: "etf" if s == ETF_ID else "equity")
     fy = fy_start_year(on)
     start, end = fy_bounds(fy)
     so_far = book.realized_gains(start, end)
@@ -137,7 +142,7 @@ def after_tax_value(
         by_security[lot.security].append(lot)
     for security, lots in by_security.items():
         p = price(security)
-        instrument = "etf" if security == ETF_ID else "equity"
+        instrument = instrument_of(security)
         qty = sum(lot.qty for lot in lots)
         gross = _q(qty * p)
         charges = order_charges("sell", float(gross), costs.on(on), instrument)

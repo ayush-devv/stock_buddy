@@ -79,6 +79,28 @@ def test_after_tax_value_hand_worked() -> None:
     assert after_tax_value(book, D(0), lambda s: D("150"), D1, COSTS, TAX) == D("14943.16")
 
 
+def test_outflow_exactly_equal_to_leftover_cash_sells_nothing() -> None:
+    entries = [
+        Buy(A, DM, D1, 100, D("100"), D("13.66"), D2, stt=D("10")),  # leaves Rs 10.00 cash
+        Sell(A, DM, D2, 1, D("10"), D("0")),  # Rs 10.00 out
+    ]
+    bench = mirror(entries, flat("100"), COSTS, TAX)
+    assert len(bench.entries) == 1 and bench.cash == D("0.00")
+    assert bench.book.quantity(ETF_ID) == 100
+
+
+def test_real_etf_lots_are_sold_out_at_etf_rates() -> None:
+    """A real ETF lot has an ordinary security_id; refdata says it is an ETF, so selling it
+    out pays 0.001% STT, not the 0.1% charged on shares."""
+    etf = 7
+    book = build([Opening(etf, DM, 100, D("10000"), date(2025, 1, 2), date(2025, 1, 3))], TAX)
+    as_equity = after_tax_value(book, D(0), lambda s: D("150"), D1, COSTS, TAX)
+    as_etf = after_tax_value(
+        book, D(0), lambda s: D("150"), D1, COSTS, TAX, instrument_of=lambda s: "etf"
+    )
+    assert as_etf - as_equity == D("14.85")  # STT 15.00 vs 0.15
+
+
 def test_after_tax_value_charges_tax_once_the_years_limit_is_used() -> None:
     book = build(
         [

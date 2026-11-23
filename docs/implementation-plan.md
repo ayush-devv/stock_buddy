@@ -170,6 +170,12 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
   - proceeds reinvested a few days later still make the benchmark trade;
   - the benchmark needs an ETF price series, which arrives with Phase 2 data;
   - `costs.yaml` currently starts on 21 Jun 2025. Add earlier Groww schedules if your history goes back further, because the engine refuses to guess charges.
+- **F4 comparison rules:**
+  - value the real book with `cash=0`, because sale proceeds count as paid out;
+  - the benchmark keeps its leftover cash, and its `shortfall` is subtracted from its value;
+  - pass `instrument_of` from refdata so real ETF lots are sold at ETF rates (ETF ISINs start `INF`, shares `INE`).
+  - **Known bias:** dividends are on neither side. The comparison therefore *understates your real holdings* by the dividends you received, since Indian NIFTY 500 ETFs mostly don't pay any.
+- **WP 1.7 importer rule:** put the DP charge on **one** `Sell` entry per stock, demat and day. `build` raises if two entries carry it.
 
 **WP 1.9 status, 2026-11-23: engine built.**
 - `pi.ledger.costs` calculates per-order charges and the DP charge, which applies per stock per sell day and is waived below ₹100. It also calculates the cost of selling a stock and moving the proceeds into the ETF.
