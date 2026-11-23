@@ -140,6 +140,14 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 | 1.13 | **Guard:**<br>• `restricted.yaml`: trading window, 6-month contra rule, pre-clearance<br>• surveillance stage, price band and lower circuit<br>• quantity not yet credited<br>• same-day sell warning, SME lot size | One unit test per rule. The import contract shows `decide` cannot skip `guard`. | 1.8, 1.12 |
 | 1.14 | Reconciliation: the ledger is compared with the broker after corporate-action entries are applied, and a 🔴 alert fires on a mismatch | A corporate-action credit that hasn't arrived yet does **not** raise a false alert | 1.8, 1.5 |
 
+**WP 1.9 status, 2026-11-23: engine built.**
+- `pi.ledger.costs` calculates per-order charges and the DP charge, which applies per stock per sell day and is waived below ₹100. It also calculates the cost of selling a stock and moving the proceeds into the ETF.
+- ETFs have their own STT rates: none on purchase and 0.001% on sale.
+- Expected values are hand-calculated. Selling ₹5,000 costs ₹34.68, or 0.69%. Selling ₹2,500 costs ₹32.09, or 1.28%.
+- **Still open:**
+  - rounding rules and the ₹1 contract-note match, which need your real contract notes (F7);
+  - confirming every rate on groww.in/pricing. Until then each schedule stays `verified: false`.
+
 **Tax items marked [unverified]** in §12 of the architecture (the carry-forward period, the s.94(7) windows, and section numbers under the 2025 Act) go into `tax.yaml` with a `confidence: unverified` flag. Take them to the yearly CA review rather than researching them now.
 
 **Phase 1 exit (§17, unchanged):** 60 clean days; the ledger matches the broker exactly; contract notes match within ₹1 excluding DP; tax P&L matches; A8 is already confirmed (2026-11-23).

@@ -97,6 +97,8 @@ class CostSchedule(_Strict):
     dp_waived_below_inr: float = Field(ge=0)
     gst_rate: float = Field(ge=0, lt=1)
     stt_delivery_rate: float = Field(ge=0, lt=1)
+    stt_etf_buy_rate: float = Field(ge=0, lt=1)
+    stt_etf_sell_rate: float = Field(ge=0, lt=1)
     exchange_txn_rate: float = Field(ge=0, lt=1)
     sebi_fee_rate: float = Field(ge=0, lt=1)
     stamp_duty_buy_rate: float = Field(ge=0, lt=1)

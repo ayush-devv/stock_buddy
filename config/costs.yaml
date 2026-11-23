@@ -12,7 +12,9 @@ schedules:
     dp_charge_inr: 20.0            # per stock per sell day, before GST (CDSL 3.50 + Groww 16.50)
     dp_waived_below_inr: 100.0
     gst_rate: 0.18                 # on brokerage, DP, exchange and SEBI charges
-    stt_delivery_rate: 0.001       # both buy and sell
+    stt_delivery_rate: 0.001       # shares: both buy and sell
+    stt_etf_buy_rate: 0.0          # equity ETF units: no STT on purchase
+    stt_etf_sell_rate: 0.00001     # equity ETF units: 0.001% on sale
     exchange_txn_rate: 0.0000297   # NSE cash
     sebi_fee_rate: 0.000001        # Rs 10 per crore
     stamp_duty_buy_rate: 0.00015   # buy side only
