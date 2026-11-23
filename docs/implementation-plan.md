@@ -275,7 +275,12 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
   - details stay in `alerts.payload_json`;
   - new tables were added as migration step 2.
 - **Not wired into the evening run yet.** The rules need holdings, prices and index data, which come from the parsers (WP 1.2), corporate actions (WP 1.6), index ingest (WP 2.1, needs F5) and ledger persistence (WP 1.7).
-- **Still to build:** RESULTS_AHEAD, CRITICAL_FILING and PLEDGE (WP 2.3 and 2.5), the UI (WP 2.6) and alert scoring (WP 2.7).
+- **WP 2.6 dashboard** (`pi ui`, `pi.ui.app`, `pi.ui.queries`):
+  - Streamlit, bound to 127.0.0.1, with usage statistics off;
+  - it reads only `pi_read.duckdb` through a read-only connection; a test proves it can't write, and the UI code never names `pi.duckdb`;
+  - tabs: Status (last run, complete-through date, 60-day progress, pending corrections, model gate), Alerts (live alerts with local-only details, and shadow counts for calibration), Data issues (new ISINs waiting for a link), and Holdings & tax, a placeholder until WP 1.7;
+  - tested with Streamlit's `AppTest`.
+- **Still to build:** RESULTS_AHEAD, CRITICAL_FILING and PLEDGE (WP 2.3 and 2.5), alert scoring (WP 2.7), and the holdings, risk and tax pages once real data exists.
 
 ## 8. Phase 3: research (about 95 h). Needs the Kite backfill, which is approved. It can overlap with Phase 2.
 

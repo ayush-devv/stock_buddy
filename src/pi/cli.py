@@ -1,12 +1,16 @@
 """Command-line entry point (WP 0.4, 1.4, 1.5).
 
-pi status | pi run [--date D] | pi notify-test
+pi status | pi run [--date D] | pi ui | pi notify-test
 pi secret status|set|delete NAME | pi schedule show|install|uninstall
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import os
+import subprocess
+import sys
 from datetime import date
 
 import typer
@@ -142,6 +146,28 @@ def run(
             typer.echo(f"warning: {exc}", err=True)
         typer.echo(f"heartbeat: {heartbeat.ping(url).detail}")
     raise typer.Exit(code=result.exit_code)
+
+
+def ui_command(port: int = 8501) -> list[str]:
+    """argv for the dashboard: localhost only, no usage statistics sent to Streamlit."""
+    spec = importlib.util.find_spec("pi.ui.app")  # locate, don't import: importing runs it
+    if spec is None or spec.origin is None:
+        raise RuntimeError("pi.ui.app not found")
+    return [
+        sys.executable, "-m", "streamlit", "run", spec.origin,
+        "--server.address", "127.0.0.1",
+        "--server.port", str(port),
+        "--server.headless", "true",
+        "--browser.gatherUsageStats", "false",
+    ]  # fmt: skip
+
+
+@app.command()
+def ui(port: int = typer.Option(8501, help="Local port.")) -> None:
+    """Open the dashboard at http://127.0.0.1:8501 (reads the snapshot only)."""
+    env = {**os.environ, "PI_HOME": str(project_root())}
+    typer.echo(f"dashboard: http://127.0.0.1:{port}  (Ctrl+C to stop)")
+    raise typer.Exit(code=subprocess.call(ui_command(port), env=env))
 
 
 @app.command("notify-test")
