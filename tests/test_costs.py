@@ -86,7 +86,28 @@ def test_switching_5000_into_the_etf() -> None:
 
 def test_the_schedule_is_chosen_by_date() -> None:
     with pytest.raises(ConfigError, match="no entry covers"):
-        switch_to_etf_cost(5_000, COSTS, date(2025, 1, 1))  # before the Groww schedule
+        switch_to_etf_cost(5_000, COSTS, date(2023, 12, 31))  # before the first schedule
+
+
+@pytest.mark.parametrize(
+    ("on", "min_brokerage", "exchange_rate", "dp_before_gst"),
+    [
+        (date(2024, 9, 30), 2.0, 0.0000322, 13.5),  # NSE's old cash transaction charge
+        (date(2024, 10, 1), 2.0, 0.0000297, 13.5),  # uniform NSE charge from 1 Oct 2024
+        (date(2025, 6, 20), 2.0, 0.0000297, 13.5),
+        (date(2025, 6, 21), 5.0, 0.0000297, 20.0),  # Groww's new minimum and DP charge
+    ],
+)
+def test_older_trades_use_the_charges_in_force_then(
+    on: date, min_brokerage: float, exchange_rate: float, dp_before_gst: float
+) -> None:
+    s = COSTS.on(on)
+    assert (s.brokerage_min_inr, s.exchange_txn_rate, s.dp_charge_inr) == (
+        min_brokerage,
+        exchange_rate,
+        dp_before_gst,
+    )
+    assert order_charges("sell", 1_000, s).brokerage == approx(min_brokerage)  # 0.1% = Rs 1
 
 
 @pytest.mark.parametrize(

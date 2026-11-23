@@ -58,7 +58,7 @@ def test_money_out_sells_just_enough_etf() -> None:
 
 def test_benchmark_tax_lives_in_its_own_world() -> None:
     """The real book's gains never enter the benchmark's realized gains."""
-    # Dates must fall inside a costs.yaml schedule (Groww's starts 21 Jun 2025); the
+    # Dates must fall inside a costs.yaml schedule (the first starts 1 Jan 2024); the
     # benchmark refuses to guess charges for earlier periods.
     real = [
         Opening(A, DM, 1000, D("10000"), date(2025, 7, 1), date(2025, 7, 2)),

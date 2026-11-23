@@ -148,11 +148,11 @@ def test_costs_lookup(root: Path) -> None:
     assert sched.brokerage_min_inr == 5.0
     assert sched.verified is False  # until WP 1.9
     with pytest.raises(ConfigError):
-        costs.on(date(2025, 1, 1))  # before the first Groww schedule
+        costs.on(date(2023, 12, 31))  # before the first Groww schedule (1 Jan 2024)
 
 
 def test_overlapping_cost_schedules_are_rejected(root: Path) -> None:
-    base = load_all(root / "config").costs.schedules[0].model_dump()
+    base = load_all(root / "config").costs.schedules[-1].model_dump()  # the open-ended one
     second = {**base, "effective_from": date(2026, 1, 1)}
     with pytest.raises(ValidationError, match="overlap"):
         CostsConfig.model_validate({"broker": "groww", "schedules": [base, second]})

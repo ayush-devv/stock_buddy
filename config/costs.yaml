@@ -1,7 +1,44 @@
 # Broker, exchange and depository charges with effective dates (architecture §11.1).
 # Every figure is unverified until WP 1.9 matches it against real Groww contract notes.
+#
+# OPEN (verify with your Groww statements, F7): since 21 Jun 2025 Groww describes the DP
+# charge as "per sell transaction". The ledger currently assumes it is billed once per
+# stock per sell day. If it is per order, two sell orders of one stock on one day cost
+# two DP charges, and the ledger's one-DP-per-stock-day check must change.
 broker: groww
 schedules:
+  - effective_from: 2024-01-01     # earliest date needed (account opened in 2024 or 2025)
+    effective_to: 2024-09-30
+    verified: false
+    source: "Business Standard 22 May 2025 (min Rs 2); Groww help page (DP Rs 13.5 + GST, undated); NSE cash transaction charge 0.00322% before the 1 Oct 2024 uniform rate"
+    brokerage_rate: 0.001
+    brokerage_max_inr: 20.0
+    brokerage_min_inr: 2.0         # Rs 2 minimum before 21 Jun 2025
+    dp_charge_inr: 13.5            # per stock per sell day, before GST; Business Standard says Rs 18.5: check statements
+    dp_waived_below_inr: 0.0       # no waiver known for this period
+    gst_rate: 0.18
+    stt_delivery_rate: 0.001
+    stt_etf_buy_rate: 0.0
+    stt_etf_sell_rate: 0.00001
+    exchange_txn_rate: 0.0000322   # NSE cash, before 1 Oct 2024
+    sebi_fee_rate: 0.000001
+    stamp_duty_buy_rate: 0.00015
+  - effective_from: 2024-10-01     # NSE moved to a uniform 0.00297% cash transaction charge
+    effective_to: 2025-06-20
+    verified: false
+    source: "as above; NSE uniform transaction charges from 1 Oct 2024"
+    brokerage_rate: 0.001
+    brokerage_max_inr: 20.0
+    brokerage_min_inr: 2.0
+    dp_charge_inr: 13.5
+    dp_waived_below_inr: 0.0
+    gst_rate: 0.18
+    stt_delivery_rate: 0.001
+    stt_etf_buy_rate: 0.0
+    stt_etf_sell_rate: 0.00001
+    exchange_txn_rate: 0.0000297
+    sebi_fee_rate: 0.000001
+    stamp_duty_buy_rate: 0.00015
   - effective_from: 2025-06-21     # Groww minimum brokerage raised from Rs 2 to Rs 5
     effective_to: null
     verified: false
@@ -9,7 +46,7 @@ schedules:
     brokerage_rate: 0.001          # 0.1% per executed order ...
     brokerage_max_inr: 20.0        # ... capped at Rs 20 ...
     brokerage_min_inr: 5.0         # ... with a Rs 5 minimum
-    dp_charge_inr: 20.0            # per stock per sell day, before GST (CDSL 3.50 + Groww 16.50)
+    dp_charge_inr: 20.0            # before GST (CDSL 3.50 + Groww 16.50); see OPEN note above
     dp_waived_below_inr: 100.0
     gst_rate: 0.18                 # on brokerage, DP, exchange and SEBI charges
     stt_delivery_rate: 0.001       # shares: both buy and sell

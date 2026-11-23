@@ -181,9 +181,14 @@ Everything in this phase writes **outside `docs/`**, so it needs your go-ahead.
 - `pi.ledger.costs` calculates per-order charges and the DP charge, which applies per stock per sell day and is waived below ₹100. It also calculates the cost of selling a stock and moving the proceeds into the ETF.
 - ETFs have their own STT rates: none on purchase and 0.001% on sale.
 - Expected values are hand-calculated. Selling ₹5,000 costs ₹34.68, or 0.69%. Selling ₹2,500 costs ₹32.09, or 1.28%.
+- **Older schedules added 2026-11-23**, because your Groww account dates from 2024 or 2025. They cover 1 Jan 2024 to 30 Sep 2024 and 1 Oct 2024 to 20 Jun 2025:
+  - minimum brokerage ₹2;
+  - DP charge ₹13.5 + GST from Groww's help page. Business Standard gives ₹18.5, so check this against your statements;
+  - NSE transaction charge 0.00322% before 1 Oct 2024.
 - **Still open:**
   - rounding rules and the ₹1 contract-note match, which need your real contract notes (F7);
-  - confirming every rate on groww.in/pricing. Until then each schedule stays `verified: false`.
+  - confirming every rate on groww.in/pricing. Until then each schedule stays `verified: false`;
+  - **whether the DP charge since 21 Jun 2025 is per stock per day or per sell order.** Groww now says "per sell transaction". If it's per order, the ledger's one-DP-per-stock-per-day check must change. Check this against your F7 statements.
 
 **WP 1.10 status, 2026-11-23: core engine built** (`pi.ledger.tax`).
 - **What it does:**
